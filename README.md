@@ -1,19 +1,23 @@
 # AeroBridge
 
-  <img width="96" height="96" alt="Aerobridge" src="https://github.com/user-attachments/assets/72f23dd0-dc4b-4151-a45b-74439970ee34" />
+ <img width="500" height="500" alt="0000__1_" src="https://github.com/user-attachments/assets/01e3cce7-86c6-4353-804f-8d5d5bd132d3" />
+
 An Adb tools client!
 made this for fun and also vibecoded it tho i made the logo at least
-
-Demo!https://youtu.be/cwKve1GVKPY
 
 it has some tools! you can also use this with scrcpy !!! YOU NEED FASTBOOT AND ADB ON YOU SYSTEM OR USER PATH !!!
 
 i may sometimes update this as it is kinda useful
 
-i havent tested the tools under advanced yet so be aware of problems! if there are any please open a github issue!
+i ~~havent~~ half tested the tools under advanced yet so be aware of problems! if there are any please open a github issue!
 
 anyway some screenshots!
 
-<img width="551" height="662" alt="photo dash" src="https://github.com/user-attachments/assets/7d761690-019a-4e4e-b0c6-f0dc23e7a2ce" /> <img width="549" height="686" alt="photo advanced" src="https://github.com/user-attachments/assets/1256db8e-74d9-4527-b9db-e4c00e762919" />  <img width="556" height="663" alt="photo adb push" src="https://github.com/user-attachments/assets/97bdf736-0269-4776-af52-c5f8c41b3c1b" />
+
+<img width="1060" height="821" alt="1" src="https://github.com/user-attachments/assets/7169972d-7140-4a5a-a2a2-891c6792df45" />
+<img width="1060" height="817" alt="2" src="https://github.com/user-attachments/assets/4dd0f494-3def-4b96-a14f-5dbe4e5a5e6c" />
+<img width="1053" height="813" alt="3" src="https://github.com/user-attachments/assets/0694afc0-2521-4654-afb0-f39327bad8c8" />
+<img width="1054" height="811" alt="4" src="https://github.com/user-attachments/assets/c6e718bc-095a-470a-8125-723cf3f528ac" />
+
 
 
