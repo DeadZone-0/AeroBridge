@@ -191,120 +191,319 @@ class AeroBridgeXP(AeroBridgeCore):
 class AeroBridgeMetro(AeroBridgeCore):
     def __init__(self, root):
         self.root = root
-        self.root.title("AeroBridge - ADB.FASTBOOT tools")
-        self.root.geometry("1050x780") 
-        
-        self.clr_bg = "#004855"        
-        self.clr_sidebar = "#002B33"   
-        self.clr_tile_blue = "#00A4EF"
-        self.clr_tile_green = "#7FBA00"
-        self.clr_tile_purple = "#744DA9"
-        self.clr_tile_red = "#E51400"
-        self.clr_tile_orange = "#F3B200" 
-        self.clr_white = "#FFFFFF"
-        self.clr_gray = "#333333"
-        
-        self.scrcpy_path = ""
-        self.root.configure(bg=self.clr_bg)
+        self.root.title("AeroBridge — ADB & Fastboot Toolkit")
+        self.root.geometry("1050x750")
+        self.root.minsize(850, 600)
 
-        try: ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('aerobridge.metro.v2')
-        except: pass
+        self.BG = "#0D1B2A"
+        self.BG2 = "#152238"
+        self.CARD = "#162640"
+        self.CARD_BORDER = "#1E3355"
+        self.SIDEBAR = "#080F1A"
+        self.ACCENT = "#00D4FF"
+        self.GREEN = "#00E676"
+        self.RED = "#FF5252"
+        self.ORANGE = "#FFB74D"
+        self.PURPLE = "#B388FF"
+        self.BLUE = "#448AFF"
+        self.WHITE = "#FFFFFF"
+        self.TEXT = "#C5D0DC"
+        self.MUTED = "#5A6D82"
+        self.DIM = "#2D3E54"
+        self.TERM_BG = "#0A0E14"
+        self.BTN_BLUE = "#0078D4"
+        self.BTN_RED = "#E53935"
+        self.BTN_GREEN = "#43A047"
+        self.BTN_AMBER = "#F9A825"
+        self.BTN_GRAY = "#37474F"
+
+        self.scrcpy_path = ""
+        self.root.configure(bg=self.BG)
+
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('aerobridge.metro.v2')
+        except:
+            pass
 
         self.setup_ui()
 
+    def _brighten(self, hx, f=0.18):
+        hx = hx.lstrip('#')
+        return "#{:02x}{:02x}{:02x}".format(
+            min(255, int(int(hx[0:2], 16) * (1 + f))),
+            min(255, int(int(hx[2:4], 16) * (1 + f))),
+            min(255, int(int(hx[4:6], 16) * (1 + f))))
+
     def setup_ui(self):
-        self.sidebar = tk.Frame(self.root, bg=self.clr_sidebar, width=240)
-        self.sidebar.pack(side="right", fill="y")
-        self.sidebar.pack_propagate(False)
+        sidebar = tk.Frame(self.root, bg=self.SIDEBAR, width=56)
+        sidebar.pack(side="left", fill="y")
+        sidebar.pack_propagate(False)
 
-        tk.Label(self.sidebar, text="AeroBridge", bg=self.clr_sidebar, fg=self.clr_white, font=("Segoe UI Light", 26)).pack(pady=(40, 5))
-        tk.Label(self.sidebar, text="by cloudkernelfox", bg=self.clr_sidebar, fg=self.clr_tile_blue, font=("Segoe UI Bold", 7)).pack(pady=(0, 40))
+        tk.Label(sidebar, text="AB", bg=self.SIDEBAR, fg=self.ACCENT, font=("Segoe UI Black", 13)).pack(pady=(18, 25))
 
-        self.nav_frame = tk.Frame(self.sidebar, bg=self.clr_sidebar)
-        self.nav_frame.pack(fill="x")
-        
-        for text, cmd in [("START", self.show_dashboard), ("ADVANCED", self.show_advanced), ("ADB PUSH(sdcard)", self.show_push), ("HELP & ABOUT", self.show_help)]:
-            lbl = tk.Label(self.nav_frame, text=text, bg=self.clr_sidebar, fg="#888", font=("Segoe UI Semibold", 11), pady=16, cursor="hand2")
-            lbl.pack(fill="x")
-            lbl.bind("<Button-1>", lambda e, c=cmd: c())
-            lbl.bind("<Enter>", lambda e, l=lbl: l.config(fg=self.clr_white, bg="#003d47"))
-            lbl.bind("<Leave>", lambda e, l=lbl: l.config(fg="#888", bg=self.clr_sidebar))
+        nav_icons = [
+            ("📱", "Device tools", lambda: self._scroll_to("device")),
+            ("🖥", "Screen tools", lambda: self._scroll_to("screen")),
+            ("⚡", "Boot options", lambda: self._scroll_to("boot")),
+            ("📂", "File transfer", lambda: self._scroll_to("file")),
+        ]
+        self._sidebar_btns = []
+        for icon, tip, cmd in nav_icons:
+            btn = tk.Label(sidebar, text=icon, bg=self.SIDEBAR, fg=self.MUTED, font=("Segoe UI", 18), cursor="hand2", pady=10)
+            btn.pack(fill="x")
+            btn.bind("<Button-1>", lambda e, c=cmd: c())
+            btn.bind("<Enter>", lambda e, b=btn: b.config(fg=self.WHITE, bg="#141E2E"))
+            btn.bind("<Leave>", lambda e, b=btn: b.config(fg=self.MUTED, bg=self.SIDEBAR))
+            self._sidebar_btns.append(btn)
 
-        log_container = tk.Frame(self.root, bg="#111")
-        log_container.pack(side="bottom", fill="x")
-        tk.Label(log_container, text=" TERMINAL OUTPUT", bg="#111", fg="#555", font=("Segoe UI Bold", 8)).pack(anchor="w", padx=10, pady=(5, 0))
-        self.log_box = tk.Text(log_container, height=6, bg="#0A0A0A", fg="#00FF00", font=("Consolas", 9), bd=0, padx=10, pady=5)
+        tk.Frame(sidebar, bg=self.SIDEBAR).pack(fill="both", expand=True)
+
+        info_btn = tk.Label(sidebar, text="ℹ", bg=self.SIDEBAR, fg=self.DIM, font=("Segoe UI", 16), cursor="hand2", pady=8)
+        info_btn.pack(side="bottom", fill="x", pady=(0, 10))
+        info_btn.bind("<Button-1>", lambda e: self._show_about())
+        info_btn.bind("<Enter>", lambda e: info_btn.config(fg=self.ACCENT))
+        info_btn.bind("<Leave>", lambda e: info_btn.config(fg=self.DIM))
+
+        right_panel = tk.Frame(self.root, bg=self.BG)
+        right_panel.pack(side="right", fill="both", expand=True)
+
+        self._build_status_bar(right_panel)
+
+        mid = tk.Frame(right_panel, bg=self.BG)
+        mid.pack(fill="both", expand=True)
+
+        self.canvas = tk.Canvas(mid, bg=self.BG, highlightthickness=0, bd=0)
+        self.scrollbar = tk.Scrollbar(mid, orient="vertical", command=self.canvas.yview)
+        self.scroll_frame = tk.Frame(self.canvas, bg=self.BG)
+
+        self.scroll_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfig(self.canvas_window, width=e.width))
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.canvas.bind_all("<MouseWheel>", lambda e: self.canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
+
+        self._build_dashboard(self.scroll_frame)
+
+        self._build_command_bar(right_panel)
+        self._build_terminal(right_panel)
+
+        style = ttk.Style()
+        style.theme_use('clam')
+        style.configure("Cyan.Horizontal.TProgressbar", troughcolor=self.BG2, background=self.ACCENT, darkcolor=self.ACCENT, lightcolor=self.ACCENT, bordercolor=self.BG2)
+        self.progress = ttk.Progressbar(right_panel, mode='indeterminate', style="Cyan.Horizontal.TProgressbar")
+        self.progress.pack(fill="x", before=self._term_frame)
+
+        self.update_status_loop()
+
+    def _build_status_bar(self, parent):
+        bar = tk.Frame(parent, bg=self.BG2, height=42)
+        bar.pack(fill="x")
+        bar.pack_propagate(False)
+
+        left = tk.Frame(bar, bg=self.BG2)
+        left.pack(side="left", padx=16)
+        self.status_dot = tk.Label(left, text="●", bg=self.BG2, fg=self.ORANGE, font=("Segoe UI", 11))
+        self.status_dot.pack(side="left")
+        self.status_lbl = tk.Label(left, text="  Searching for device...", bg=self.BG2, fg=self.TEXT, font=("Segoe UI", 10))
+        self.status_lbl.pack(side="left")
+
+        right = tk.Frame(bar, bg=self.BG2)
+        right.pack(side="right", padx=16)
+        tk.Label(right, text="AeroBridge v2.1", bg=self.BG2, fg=self.DIM, font=("Segoe UI", 8)).pack(side="right")
+
+    def _build_dashboard(self, parent):
+        pad = tk.Frame(parent, bg=self.BG)
+        pad.pack(fill="x", padx=24, pady=(20, 10))
+
+        tk.Label(pad, text="Dashboard", bg=self.BG, fg=self.WHITE, font=("Segoe UI Light", 32), anchor="w").pack(fill="x")
+        tk.Label(pad, text="All your device tools in one place", bg=self.BG, fg=self.MUTED, font=("Segoe UI", 10), anchor="w").pack(fill="x", pady=(2, 0))
+
+        cards_frame = tk.Frame(parent, bg=self.BG)
+        cards_frame.pack(fill="x", padx=24, pady=(10, 0))
+
+        cards_frame.columnconfigure(0, weight=1)
+        cards_frame.columnconfigure(1, weight=1)
+
+        self._section_anchors = {}
+
+        device_card = self._build_card(cards_frame, "📱  DEVICE MANAGEMENT", [
+            ("📥", "Install APK", "Browse and install an APK package", self.BTN_BLUE, self.run_install),
+            ("⚡", "Sideload ROM", "Flash a recovery ZIP via ADB sideload", self.BTN_RED, self.run_sideload),
+        ])
+        device_card.grid(row=0, column=0, padx=(0, 8), pady=8, sticky="nsew")
+        self._section_anchors["device"] = device_card
+
+        screen_card = self._build_card(cards_frame, "🖥  SCREEN TOOLS", [
+            ("💻", "Mirror Screen", "Launch scrcpy for real-time mirroring", self.BTN_GREEN, self.launch_scrcpy),
+            ("📸", "Screenshot", "Capture and save a device screenshot", self.PURPLE, self.take_screenshot),
+        ])
+        screen_card.grid(row=0, column=1, padx=(8, 0), pady=8, sticky="nsew")
+        self._section_anchors["screen"] = screen_card
+
+        boot_card = self._build_card(cards_frame, "⚙  BOOT OPTIONS", [
+            ("🔄", "Normal Reboot", "Reboot the device normally", self.BTN_GRAY, lambda: self.run_adb_background(["reboot"])),
+            ("⬇", "Bootloader", "Reboot into bootloader / fastboot", self.BTN_GRAY, lambda: self.run_adb_background(["reboot", "bootloader"])),
+            ("🔧", "Recovery Mode", "Reboot into recovery", self.BTN_GRAY, lambda: self.run_adb_background(["reboot", "recovery"])),
+            ("🚀", "Fastboot Boot", "Boot a temporary .img file", self.BTN_AMBER, self.run_fastboot_boot),
+        ])
+        boot_card.grid(row=1, column=0, padx=(0, 8), pady=8, sticky="nsew")
+        self._section_anchors["boot"] = boot_card
+
+        push_card = self._build_push_card(cards_frame)
+        push_card.grid(row=1, column=1, padx=(8, 0), pady=8, sticky="nsew")
+        self._section_anchors["file"] = push_card
+
+    def _build_card(self, parent, title, actions):
+        card = tk.Frame(parent, bg=self.CARD, highlightbackground=self.CARD_BORDER, highlightthickness=1)
+
+        header = tk.Frame(card, bg=self.CARD)
+        header.pack(fill="x", padx=20, pady=(16, 10))
+        tk.Label(header, text=title, bg=self.CARD, fg=self.ACCENT, font=("Segoe UI Semibold", 10)).pack(anchor="w")
+
+        for icon, label, desc, color, cmd in actions:
+            self._action_row(card, icon, label, desc, color, cmd)
+
+        tk.Frame(card, bg=self.CARD, height=8).pack()
+        return card
+
+    def _action_row(self, parent, icon, label, desc, color, cmd):
+        row = tk.Frame(parent, bg=self.CARD, cursor="hand2")
+        row.pack(fill="x", padx=14, pady=3)
+
+        icon_frame = tk.Frame(row, bg=color, width=36, height=36)
+        icon_frame.pack(side="left", padx=(0, 12))
+        icon_frame.pack_propagate(False)
+        icon_lbl = tk.Label(icon_frame, text=icon, bg=color, fg="white", font=("Segoe UI", 14))
+        icon_lbl.pack(expand=True)
+
+        text_frame = tk.Frame(row, bg=self.CARD)
+        text_frame.pack(side="left", fill="x", expand=True)
+        name_lbl = tk.Label(text_frame, text=label, bg=self.CARD, fg=self.WHITE, font=("Segoe UI Semibold", 10), anchor="w")
+        name_lbl.pack(fill="x")
+        desc_lbl = tk.Label(text_frame, text=desc, bg=self.CARD, fg=self.MUTED, font=("Segoe UI", 8), anchor="w")
+        desc_lbl.pack(fill="x")
+
+        arrow = tk.Label(row, text="›", bg=self.CARD, fg=self.DIM, font=("Segoe UI", 18))
+        arrow.pack(side="right", padx=(8, 4))
+
+        hover_bg = self._brighten(self.CARD, 0.25)
+        all_widgets = [row, text_frame, name_lbl, desc_lbl, arrow]
+        for w in all_widgets:
+            w.bind("<Button-1>", lambda e, c=cmd: c())
+            w.bind("<Enter>", lambda e: [x.config(bg=hover_bg) for x in all_widgets])
+            w.bind("<Leave>", lambda e: [x.config(bg=self.CARD) for x in all_widgets])
+            w.config(cursor="hand2")
+        icon_frame.bind("<Button-1>", lambda e, c=cmd: c())
+        icon_lbl.bind("<Button-1>", lambda e, c=cmd: c())
+
+    def _build_push_card(self, parent):
+        card = tk.Frame(parent, bg=self.CARD, highlightbackground=self.CARD_BORDER, highlightthickness=1)
+
+        header = tk.Frame(card, bg=self.CARD)
+        header.pack(fill="x", padx=20, pady=(16, 10))
+        tk.Label(header, text="📂  FILE TRANSFER", bg=self.CARD, fg=self.ACCENT, font=("Segoe UI Semibold", 10)).pack(anchor="w")
+
+        body = tk.Frame(card, bg=self.CARD)
+        body.pack(fill="x", padx=20, pady=(0, 16))
+
+        tk.Label(body, text="Target folder on device:", bg=self.CARD, fg=self.TEXT, font=("Segoe UI", 9), anchor="w").pack(fill="x", pady=(0, 4))
+        self.dest_var = tk.StringVar(value="Downloads")
+        combo = ttk.Combobox(body, textvariable=self.dest_var, values=("Downloads", "DCIM/Camera", "Pictures", "Music", "Documents"), state="readonly", font=("Segoe UI", 10))
+        combo.pack(fill="x", pady=(0, 14))
+
+        push_btn = tk.Button(body, text="📤  SELECT & PUSH FILE", bg=self.BTN_BLUE, fg="white", font=("Segoe UI Semibold", 10), relief="flat", pady=10, cursor="hand2", command=self.push_file, activebackground=self._brighten(self.BTN_BLUE), activeforeground="white", bd=0)
+        push_btn.pack(fill="x")
+        push_btn.bind("<Enter>", lambda e: push_btn.config(bg=self._brighten(self.BTN_BLUE)))
+        push_btn.bind("<Leave>", lambda e: push_btn.config(bg=self.BTN_BLUE))
+
+        return card
+
+    def _build_command_bar(self, parent):
+        bar = tk.Frame(parent, bg=self.BG2, height=40)
+        bar.pack(fill="x")
+        bar.pack_propagate(False)
+
+        tk.Label(bar, text="  $  adb", bg=self.BG2, fg=self.ACCENT, font=("Cascadia Code", 10)).pack(side="left", padx=(14, 6))
+
+        self.cmd_entry = tk.Entry(bar, bg="#0F1923", fg=self.GREEN, font=("Cascadia Code", 10), insertbackground=self.GREEN, bd=0, relief="flat")
+        self.cmd_entry.pack(side="left", fill="both", expand=True, padx=(0, 8), pady=8)
+        self.cmd_entry.insert(0, "shell getprop ro.product.model")
+        self.cmd_entry.bind("<Return>", lambda e: self.run_custom_adb())
+
+        run_btn = tk.Button(bar, text="Run ▶", bg=self.ACCENT, fg="#000", font=("Segoe UI Bold", 9), relief="flat", cursor="hand2", command=self.run_custom_adb, bd=0, padx=14)
+        run_btn.pack(side="right", padx=(0, 14), pady=7)
+        run_btn.bind("<Enter>", lambda e: run_btn.config(bg=self._brighten(self.ACCENT)))
+        run_btn.bind("<Leave>", lambda e: run_btn.config(bg=self.ACCENT))
+
+    def _build_terminal(self, parent):
+        self._term_frame = tk.Frame(parent, bg=self.TERM_BG)
+        self._term_frame.pack(fill="x", side="bottom")
+
+        accent_line = tk.Frame(self._term_frame, bg=self.ACCENT, height=2)
+        accent_line.pack(fill="x")
+
+        header = tk.Frame(self._term_frame, bg=self.TERM_BG)
+        header.pack(fill="x")
+        tk.Label(header, text="  ⌘  TERMINAL", bg=self.TERM_BG, fg=self.DIM, font=("Segoe UI Semibold", 8)).pack(anchor="w", padx=10, pady=(4, 2))
+
+        self.log_box = tk.Text(self._term_frame, height=7, bg=self.TERM_BG, fg=self.GREEN, font=("Cascadia Code", 9), bd=0, padx=14, pady=4, insertbackground=self.GREEN, selectbackground="#1A3050")
         self.log_box.pack(fill="x")
         self.log_box.config(state="disabled")
 
-        self.main_area = tk.Frame(self.root, bg=self.clr_bg)
-        self.main_area.pack(side="left", expand=True, fill="both")
-        self.progress = ttk.Progressbar(self.main_area, mode='indeterminate')
+    def _scroll_to(self, section):
+        widget = self._section_anchors.get(section)
+        if widget:
+            self.canvas.update_idletasks()
+            y = widget.winfo_y()
+            canvas_height = self.canvas.winfo_height()
+            scroll_max = self.scroll_frame.winfo_height()
+            if scroll_max > canvas_height:
+                fraction = y / scroll_max
+                self.canvas.yview_moveto(fraction)
 
-        self.show_dashboard()
+    def _show_about(self):
+        win = tk.Toplevel(self.root)
+        win.title("About AeroBridge")
+        win.geometry("380x260")
+        win.configure(bg=self.BG)
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
 
-    def create_tile(self, parent, icon_char, text, color, cmd, width_factor=1, height_factor=1):
-        frame = tk.Frame(parent, bg=color, width=(165 * width_factor), height=(165 * height_factor))
-        frame.pack_propagate(False)
-        tk.Label(frame, text=icon_char, bg=color, fg="white", font=("Segoe UI Symbol", 32)).pack(anchor="nw", padx=15, pady=15)
-        tk.Label(frame, text=text, bg=color, fg="white", font=("Segoe UI Semibold", 12), wraplength=140, justify="left").pack(side="bottom", anchor="sw", padx=15, pady=15)
-        
-        for w in frame.winfo_children() + [frame]:
-            w.bind("<Button-1>", lambda e: cmd())
-            w.bind("<Enter>", lambda e: frame.config(highlightbackground="white", highlightthickness=2))
-            w.bind("<Leave>", lambda e: frame.config(highlightthickness=0))
-            w.config(cursor="hand2")
-        return frame
+        tk.Label(win, text="AeroBridge", bg=self.BG, fg=self.WHITE, font=("Segoe UI Light", 28)).pack(pady=(28, 2))
+        tk.Label(win, text="Version 2.1 — Stable Build", bg=self.BG, fg=self.ACCENT, font=("Segoe UI", 10)).pack()
+        tk.Label(win, text="by cloudkernelfox", bg=self.BG, fg=self.MUTED, font=("Segoe UI", 9)).pack(pady=(2, 16))
 
-    def clear_main(self):
-        for w in self.main_area.winfo_children():
-            if w != self.progress: w.destroy()
-        self.progress.pack_forget()
+        tk.Frame(win, bg=self.DIM, height=1).pack(fill="x", padx=40)
 
-    def show_dashboard(self):
-        self.clear_main(); self.progress.pack(fill="x")
-        w = tk.Frame(self.main_area, bg=self.clr_bg); w.pack(expand=True, anchor="e", padx=(0, 50))
-        tk.Label(w, text="Start", fg="white", bg=self.clr_bg, font=("Segoe UI Light", 48)).pack(anchor="e", pady=(0, 20))
-        c = tk.Frame(w, bg=self.clr_bg); c.pack(anchor="e")
-        self.create_tile(c, "📥", "Install APK", self.clr_tile_blue, self.run_install, 2, 1).grid(row=0, column=0, columnspan=2, padx=4, pady=4)
-        self.create_tile(c, "💻", "Mirror Screen", self.clr_tile_green, self.launch_scrcpy, 1, 1).grid(row=0, column=2, padx=4, pady=4)
-        self.create_tile(c, "📸", "Screenshot", self.clr_tile_purple, self.take_screenshot, 1, 1).grid(row=1, column=0, padx=4, pady=4)
-        self.status_tile = tk.Frame(c, bg=self.clr_gray, width=338, height=165); self.status_tile.grid(row=1, column=1, columnspan=2, padx=4, pady=4)
-        self.status_tile.pack_propagate(False); self.status_lbl = tk.Label(self.status_tile, text="Searching...", bg=self.clr_gray, fg="white", font=("Segoe UI Semibold", 12))
-        self.status_lbl.pack(expand=True); self.update_status_loop()
+        tk.Label(win, text="ADB & Fastboot toolkit for Android.\nFull Windows XP x64 SP2 support.\nScreen mirroring, flashing & more.", bg=self.BG, fg=self.TEXT, font=("Segoe UI", 9), justify="center").pack(pady=16)
 
-    def show_advanced(self):
-        self.clear_main(); self.progress.pack(fill="x")
-        w = tk.Frame(self.main_area, bg=self.clr_bg); w.pack(expand=True, anchor="e", padx=(0, 50))
-        tk.Label(w, text="Advanced", fg="white", bg=self.clr_bg, font=("Segoe UI Light", 48)).pack(anchor="e", pady=(0, 20))
-        c = tk.Frame(w, bg=self.clr_bg); c.pack(anchor="e")
-        self.create_tile(c, "⚡", "Sideload ROM (.zip)", self.clr_tile_red, self.run_sideload, 2, 1).grid(row=0, column=0, columnspan=2, padx=4, pady=4)
-        self.create_tile(c, "🔄", "Normal\nReboot", self.clr_gray, lambda: self.run_adb_background(["reboot"])).grid(row=0, column=2, padx=4, pady=4)
-        self.create_tile(c, "⚙️", "Bootloader", self.clr_gray, lambda: self.run_adb_background(["reboot", "bootloader"])).grid(row=1, column=0, padx=4, pady=4)
-        self.create_tile(c, "🔧", "Recovery", self.clr_gray, lambda: self.run_adb_background(["reboot", "recovery"])).grid(row=1, column=1, padx=4, pady=4)
-        self.create_tile(c, "🚀", "Fastboot Boot (.img)", self.clr_tile_orange, self.run_fastboot_boot, 1, 1).grid(row=1, column=2, padx=4, pady=4)
+        link = tk.Label(win, text="github.com/Rato0101/AeroBridge", bg=self.BG, fg=self.ACCENT, font=("Segoe UI", 9), cursor="hand2")
+        link.pack()
+        link.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/Rato0101/AeroBridge"))
 
-    def show_push(self):
-        self.clear_main(); self.progress.pack(fill="x")
-        w = tk.Frame(self.main_area, bg=self.clr_bg); w.pack(expand=True, anchor="e", padx=(0, 50))
-        tk.Label(w, text="ADB Push", fg="white", bg=self.clr_bg, font=("Segoe UI Light", 48)).pack(anchor="e", pady=(0, 20))
-        box = tk.Frame(w, bg=self.clr_sidebar, padx=60, pady=60); box.pack(anchor="e")
-        tk.Label(box, text="SELECT SDCARD FOLDER", bg=self.clr_sidebar, fg="#00A4EF", font=("Segoe UI Bold", 10)).pack(anchor="w")
-        self.dest_var = tk.StringVar(value="Downloads")
-        menu = ttk.Combobox(box, textvariable=self.dest_var, values=("Downloads", "DCIM/Camera", "Pictures"), state="readonly", font=("Segoe UI", 12), width=30)
-        menu.pack(fill="x", pady=(10, 40))
-        tk.Button(box, text="SELECT & PUSH FILE", bg=self.clr_tile_blue, fg="white", font=("Segoe UI Bold", 12), relief="flat", pady=20, cursor="hand2", command=self.push_file).pack(fill="x")
+    def run_custom_adb(self):
+        cmd_text = self.cmd_entry.get().strip()
+        if cmd_text:
+            args = cmd_text.split()
+            self.run_adb_background(args, f"Result of: adb {cmd_text}")
 
-    def show_help(self):
-        self.clear_main(); w = tk.Frame(self.main_area, bg=self.clr_bg); w.pack(expand=True, anchor="e", padx=(0, 50))
-        tk.Label(w, text="Help & About", fg="white", bg=self.clr_bg, font=("Segoe UI Light", 48)).pack(anchor="e", pady=(0, 20))
-        c = tk.Frame(w, bg=self.clr_bg); c.pack(anchor="e")
-        self.create_tile(c, "🌐", "Github", self.clr_tile_blue, lambda: webbrowser.open("https://github.com/Rato0101/AeroBridge"), 1, 1).grid(row=0, column=0, padx=4, pady=4)
-        self.create_tile(c, "🛠️", "Report a\nBug (git issues)", self.clr_tile_purple, lambda: webbrowser.open("https://github.com/Rato0101/AeroBridge/issues"), 1, 1).grid(row=0, column=1, padx=4, pady=4)
-        about = tk.Frame(c, bg=self.clr_sidebar, width=338, height=165, padx=20, pady=20); about.grid(row=1, column=0, columnspan=2, padx=4, pady=4); about.pack_propagate(False)
-        tk.Label(about, text="AeroBridge With proper XP support\ntested on XP X64 SP2", bg=self.clr_sidebar, fg="white", font=("Segoe UI Bold", 11)).pack(anchor="w")
-        tk.Label(about, text="Version 2.1 (Stable Build)", bg=self.clr_sidebar, fg="#888", font=("Segoe UI", 9)).pack(anchor="w")
-        tk.Label(about, text="\nAn utility for Android\ndevice trickery things and mirroring.", bg=self.clr_sidebar, fg="#bbb", font=("Segoe UI", 9), justify="left").pack(anchor="w")
+    def update_status_loop(self):
+        res = self.run_command(["adb", "devices"])
+        if res and hasattr(self, 'status_lbl') and self.status_lbl.winfo_exists():
+            devices = [l for l in res.stdout.strip().split('\n')[1:] if l.strip()]
+            if devices:
+                device_id = devices[0].split()[0]
+                self.status_dot.config(fg=self.GREEN)
+                self.status_lbl.config(text=f"  {device_id}  —  Connected", fg=self.GREEN)
+            else:
+                self.status_dot.config(fg=self.RED)
+                self.status_lbl.config(text="  No device detected", fg=self.RED)
+        self.root.after(3000, self.update_status_loop)
 
 
 # ==========================================
@@ -312,17 +511,15 @@ class AeroBridgeMetro(AeroBridgeCore):
 # ==========================================
 if __name__ == "__main__":
     root = tk.Tk()
-    
-    # Check if the OS is Windows XP/2000/Server 2003 (NT Major Version 5)
+
     is_xp = False
     if os.name == 'nt' and hasattr(sys, 'getwindowsversion'):
         if sys.getwindowsversion().major == 5:
             is_xp = True
-            
-    # Launch appropriate UI
+
     if is_xp:
         app = AeroBridgeXP(root)
     else:
         app = AeroBridgeMetro(root)
-        
+
     root.mainloop()
